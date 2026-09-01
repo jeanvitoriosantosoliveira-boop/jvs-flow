@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Plus, Users2, Trash2 } from "lucide-react";
 
 type Team = { id: string; name: string; description: string | null; color: string | null; leader_id: string | null };
-type Member = { id: string; team_id: string; user_id: string; role_in_team: "manager" | "member" };
+type Member = { id: string; team_id: string; user_id: string; role_in_team: "leader" | "member" };
 type Profile = { id: string; name: string };
 type Client = { id: string; name: string; status: string };
 type TeamClient = { id: string; team_id: string; client_id: string };
@@ -53,7 +53,7 @@ export default function TeamsDB() {
     load();
   }
 
-  async function addMember(teamId: string, userId: string, role: "manager" | "member") {
+  async function addMember(teamId: string, userId: string, role: "leader" | "member") {
     if (!userId) return;
     const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId, role_in_team: role });
     if (error) return toast.error(error.message);
@@ -148,7 +148,7 @@ export default function TeamsDB() {
                     {tm.map(m => {
                       const p = profiles.find(x => x.id === m.user_id);
                       return (
-                        <Badge key={m.id} variant={m.role_in_team === "manager" ? "default" : "secondary"} className="gap-1">
+                        <Badge key={m.id} variant={m.role_in_team === "leader" ? "default" : "secondary"} className="gap-1">
                           {p?.name ?? "—"}
                           {isAdmin && (
                             <button onClick={() => removeMember(t.id, m.user_id)} className="ml-1 opacity-60 hover:opacity-100">×</button>
@@ -169,9 +169,9 @@ export default function TeamsDB() {
                       </select>
                       <select
                         className="flex-1 text-xs px-2 py-1.5 rounded-md border bg-background"
-                        onChange={e => { if (e.target.value) { addMember(t.id, e.target.value, "manager"); e.target.value = ""; } }}
+                        onChange={e => { if (e.target.value) { addMember(t.id, e.target.value, "leader"); e.target.value = ""; } }}
                       >
-                        <option value="">+ Adicionar gerente...</option>
+                        <option value="">+ Adicionar líder do time...</option>
                         {available.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
