@@ -28,10 +28,12 @@ interface AuthState {
 const Ctx = createContext<AuthState | null>(null);
 
 async function loadAppUser(supaUser: SupaUser): Promise<AuthUser> {
-  const [{ data: profile }, { data: roles }] = await Promise.all([
+  const [{ data: profile }, { data: roles, error: rolesError }] = await Promise.all([
     supabase.from("profiles").select("name, avatar_url, position").eq("id", supaUser.id).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", supaUser.id),
   ]);
+  if (rolesError) console.error("[AuthContext] user_roles query error:", rolesError);
+  console.log("[AuthContext] roles raw:", roles, "for user:", supaUser.email);
   const roleList = (roles ?? []).map((r: any) => r.role as AppRole);
   const role: AppRole = roleList.includes("leader")
     ? "leader"

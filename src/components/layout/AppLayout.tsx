@@ -56,8 +56,8 @@ export function AppLayout() {
         <div className="flex items-center gap-3 px-2 mb-8">
           <Logo size={36} />
           <div>
-            <h1 className="font-display font-bold text-lg leading-none">Versátil</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Digital</p>
+            <h1 className="font-display font-bold text-lg leading-none">JVS</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Tech</p>
           </div>
         </div>
 
