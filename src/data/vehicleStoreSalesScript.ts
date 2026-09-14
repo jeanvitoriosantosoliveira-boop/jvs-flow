@@ -12,7 +12,8 @@ export function isVehicleStoreNiche(niche?: string | null) {
   return normalized === "loja de veiculo"
     || normalized === "loja de veiculos"
     || normalized === "lojas de veiculo"
-    || normalized === "lojas de veiculos";
+    || normalized === "lojas de veiculos"
+    || normalized === "veiculos";
 }
 
 export const CALL_OBJECTIVE = {
