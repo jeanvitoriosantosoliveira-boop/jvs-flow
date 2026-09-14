@@ -12,9 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, MessageCircle, Instagram, Phone, Calendar, Trash2, Pencil, Save, Clock } from "lucide-react";
+import { Plus, MessageCircle, Instagram, Phone, Calendar, Trash2, Pencil, Save, Clock, Play, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PeriodFilter, type Period, inPeriod } from "@/components/PeriodFilter";
+import { SalesFlowDialog } from "@/components/SalesFlowDialog";
+import { isVehicleStoreNiche, VEHICLE_STORE_SCRIPT_KEY, VEHICLE_STORE_SCRIPT_VERSION } from "@/data/vehicleStoreSalesScript";
+import type { Json } from "@/integrations/supabase/types";
+import type { LeadScriptFlow } from "@/types/salesFlow";
 
 const BRL = (v: number) => `R$ ${(v ?? 0).toLocaleString("pt-BR")}`;
 
@@ -127,10 +131,64 @@ export default function SalesFunnel() {
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [leadDraft, setLeadDraft] = useState<Partial<Lead>>({});
   const [newActivity, setNewActivity] = useState<{ kind: string; body: string }>({ kind: "note", body: "" });
+  const [leadFlows, setLeadFlows] = useState<LeadScriptFlow[]>([]);
+  const [loadingFlows, setLoadingFlows] = useState(false);
+  const [activeFlow, setActiveFlow] = useState<LeadScriptFlow | null>(null);
+  const [flowOpen, setFlowOpen] = useState(false);
 
   function openLeadDialog(lead: Lead) {
     setOpenLead(lead);
     setLeadDraft(lead);
+    void loadLeadFlows(lead.id);
+  }
+
+  async function loadLeadFlows(leadId: string) {
+    setLoadingFlows(true);
+    setLeadFlows([]);
+    const { data, error } = await supabase
+      .from("lead_script_flows")
+      .select("*")
+      .eq("lead_id", leadId)
+      .order("updated_at", { ascending: false });
+    setLoadingFlows(false);
+    if (error) {
+      toast.error("Não foi possível carregar o histórico de Script Flow.");
+      return;
+    }
+    setLeadFlows((data ?? []) as LeadScriptFlow[]);
+  }
+
+  async function startScriptFlow() {
+    if (!openLead || !user?.id) return;
+    const { data, error } = await supabase
+      .from("lead_script_flows")
+      .insert({
+        lead_id: openLead.id,
+        created_by: user.id,
+        script_key: VEHICLE_STORE_SCRIPT_KEY,
+        script_version: VEHICLE_STORE_SCRIPT_VERSION,
+        answers: {} as Json,
+      })
+      .select()
+      .single();
+    if (error) {
+      toast.error("Não foi possível iniciar o Script Flow: " + error.message);
+      return;
+    }
+    const created = data as LeadScriptFlow;
+    setLeadFlows((current) => [created, ...current]);
+    setActiveFlow(created);
+    setFlowOpen(true);
+  }
+
+  function openScriptFlow(flow: LeadScriptFlow) {
+    setActiveFlow(flow);
+    setFlowOpen(true);
+  }
+
+  function handleFlowSaved(saved: LeadScriptFlow) {
+    setActiveFlow(saved);
+    setLeadFlows((current) => current.map((flow) => flow.id === saved.id ? saved : flow));
   }
 
   async function createLead() {
@@ -357,6 +415,62 @@ export default function SalesFunnel() {
               </div>
               <div><Label>Notas</Label><Textarea value={leadDraft.notes ?? ""} onChange={e => setLeadDraft(f => ({ ...f, notes: e.target.value }))} rows={5} /></div>
 
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h4 className="font-semibold text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Script Flow</h4>
+                    <p className="text-xs text-muted-foreground">Roteiro guiado e histórico das ligações.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-2"
+                    onClick={startScriptFlow}
+                    disabled={!isVehicleStoreNiche(leadDraft.niche)}
+                  >
+                    <Play className="w-4 h-4" /> Iniciar Script Flow
+                  </Button>
+                </div>
+
+                {!isVehicleStoreNiche(leadDraft.niche) && (
+                  <p className="text-xs text-warning bg-warning/5 border border-warning/20 rounded-lg p-3">
+                    O roteiro disponível é exclusivo para o nicho “Lojas de veículos”.
+                  </p>
+                )}
+
+                {loadingFlows ? (
+                  <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Carregando histórico...
+                  </div>
+                ) : leadFlows.length ? (
+                  <div className="space-y-2">
+                    {leadFlows.map((flow) => {
+                      const completed = flow.status === "completed";
+                      const progress = Math.round(((Math.min(flow.current_step, 8) + 1) / 9) * 100);
+                      return (
+                        <button
+                          type="button"
+                          key={flow.id}
+                          onClick={() => openScriptFlow(flow)}
+                          className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/30 transition"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{completed ? "Ligação concluída" : "Ligação em andamento"}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(flow.started_at).toLocaleString("pt-BR")} · versão {flow.script_version}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <Badge variant={completed ? "secondary" : "outline"}>{completed ? "Visualizar" : "Continuar"}</Badge>
+                            {!completed && <p className="text-[10px] text-muted-foreground mt-1">{progress}% preenchido</p>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma ligação guiada registrada.</p>
+                )}
+              </div>
+
               <div className="border-t border-border pt-3">
                 <h4 className="font-semibold text-sm mb-2">Atividades</h4>
                 <div className="flex gap-2 mb-3">
@@ -395,6 +509,17 @@ export default function SalesFunnel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <SalesFlowDialog
+        open={flowOpen}
+        lead={openLead}
+        flow={activeFlow}
+        onOpenChange={(nextOpen) => {
+          setFlowOpen(nextOpen);
+          if (!nextOpen) setActiveFlow(null);
+        }}
+        onSaved={handleFlowSaved}
+      />
     </div>
   );
 }

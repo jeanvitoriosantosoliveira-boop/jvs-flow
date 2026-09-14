@@ -410,6 +410,66 @@ export type Database = {
           },
         ]
       }
+      lead_script_flows: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          current_step: number
+          id: string
+          lead_id: string
+          script_key: string
+          script_version: number
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          current_step?: number
+          id?: string
+          lead_id: string
+          script_key?: string
+          script_version?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          current_step?: number
+          id?: string
+          lead_id?: string
+          script_key?: string
+          script_version?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_script_flows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_script_flows_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_stages: {
         Row: {
           color: string
