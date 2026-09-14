@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import {
   CALL_OBJECTIVE, CENTRAL_PHRASES, DECISION_MAKER_GUIDANCE, DEMO_CONFIRMATION,
-  DEMO_INVITATION, DIAGNOSTIC_QUESTIONS, INSTAGRAM_DIAGNOSIS, OBJECTIONS,
+  DEFAULT_STORE_OBSERVATION, DEMO_INVITATION, DIAGNOSTIC_QUESTIONS, FINAL_OBJECTIVE, OBJECTIONS,
   OPENING_SCRIPT, PRE_CALL_CHECKLIST, RECEPTION_QUESTION_RESPONSE, SOLUTION_SCRIPT,
-  THIRTY_SECONDS_SCRIPT, TURN_GUIDANCE, TURN_SCRIPT, VALUE_SCRIPT,
+  THIRTY_SECONDS_SCRIPT, TURN_GUIDANCE, TURN_SCRIPT,
 } from "@/data/vehicleStoreSalesScript";
 import type { SalesFlowAnswers, SalesFlowAnswerValue, SalesFlowLead } from "@/types/salesFlow";
 
@@ -75,15 +75,15 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   const selectedObjections = Array.isArray(answers.objections) ? answers.objections as string[] : [];
   const contactRole = text("contact_role") as keyof typeof DECISION_MAKER_GUIDANCE | "";
   const leadName = lead.name || lead.company || "responsável";
-  const observation = text("specific_observation") || "[OBSERVAÇÃO ESPECÍFICA]";
+  const observation = text("specific_observation") || DEFAULT_STORE_OBSERVATION;
   const replaceTokens = (line: string) => line.replace("[NOME]", leadName).replace("[OBSERVAÇÃO ESPECÍFICA]", observation);
 
   if (step === 0) {
     return (
       <div className="space-y-5">
         <ScriptBlock title={CALL_OBJECTIVE.title} lines={[CALL_OBJECTIVE.description, CALL_OBJECTIVE.change]} />
-        <TextAnswer id="specific_observation" label="Observação real sobre a loja *" value={text("specific_observation")} readOnly={readOnly} onChange={onChange} />
-        <TextAnswer id="social_proof" label="Resultado concreto para usar como prova social" value={text("social_proof")} readOnly={readOnly} onChange={onChange} />
+        <TextAnswer id="specific_observation" label="Observação real sobre a loja (opcional)" value={text("specific_observation")} readOnly={readOnly} onChange={onChange} />
+        <p className="text-xs text-muted-foreground">Se ficar vazio, será utilizado: “{DEFAULT_STORE_OBSERVATION}”.</p>
         <div className="space-y-2">
           <Label>Checklist antes de ligar</Label>
           {PRE_CALL_CHECKLIST.map((item, index) => {
@@ -103,10 +103,14 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 1) {
     const guidance = contactRole ? DECISION_MAKER_GUIDANCE[contactRole] : null;
     const needsResponsible = contactRole === "salesperson" || contactRole === "reception" || (contactRole === "manager" && text("participates_decisions") === "no");
+    const canPitch = contactRole === "owner"
+      || (contactRole === "manager" && !!text("participates_decisions") && text("participates_decisions") !== "no")
+      || (needsResponsible && text("reached_decision_maker") === "yes");
     return (
       <div className="space-y-5">
+        <ScriptBlock title="Abertura — identificar o responsável" lines={OPENING_SCRIPT.map(replaceTokens)} />
         <div className="space-y-1.5">
-          <Label>Quem atendeu? *</Label>
+          <Label>Qual é a função de quem atendeu? *</Label>
           <Select value={contactRole} disabled={readOnly} onValueChange={(value) => onChange("contact_role", value)}>
             <SelectTrigger><SelectValue placeholder="Selecione o perfil" /></SelectTrigger>
             <SelectContent>
@@ -116,7 +120,11 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
         </div>
         {guidance && <ScriptBlock title="Orientação" lines={[guidance.script]} />}
         {contactRole === "manager" && (
-          <Choice id="participates_decisions" label="Participa das decisões comerciais e de divulgação?" value={text("participates_decisions")} readOnly={readOnly} onChange={onChange} />
+          <>
+            <Choice id="participates_decisions" label="Participa das decisões comerciais e de divulgação?" value={text("participates_decisions")} readOnly={readOnly} onChange={onChange} />
+            {text("participates_decisions") === "yes" && <ScriptBlock title="Continue" lines={["Perfeito, então consegue me ajudar."]} />}
+            {text("participates_decisions") === "no" && <ScriptBlock title="Continue" lines={["Tranquilo. Quem normalmente cuida dessa parte aí na loja?"]} />}
+          </>
         )}
         {contactRole === "reception" && (
           <>
@@ -136,6 +144,14 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
             )}
           </>
         )}
+        {canPitch && (
+          <>
+            <Choice id="accepted_thirty_seconds" label="A pessoa aceitou ouvir os 30 segundos?" value={text("accepted_thirty_seconds")} readOnly={readOnly} onChange={onChange} />
+            {text("accepted_thirty_seconds") === "no" && (
+              <TextAnswer id="opening_reaction" label="O que ela respondeu?" value={text("opening_reaction")} readOnly={readOnly} onChange={onChange} />
+            )}
+          </>
+        )}
       </div>
     );
   }
@@ -143,43 +159,33 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 2) {
     return (
       <div className="space-y-5">
-        <ScriptBlock title="Abertura" lines={OPENING_SCRIPT.map(replaceTokens)} />
-        <Choice id="accepted_thirty_seconds" label="O contato aceitou ouvir os 30 segundos?" value={text("accepted_thirty_seconds")} readOnly={readOnly} onChange={onChange} />
-        {text("accepted_thirty_seconds") === "yes"
-          ? <ScriptBlock title="Se ele topar" lines={THIRTY_SECONDS_SCRIPT} />
-          : text("accepted_thirty_seconds") === "no"
-            ? <TextAnswer id="opening_reaction" label="O que ele respondeu?" value={text("opening_reaction")} readOnly={readOnly} onChange={onChange} />
-            : null}
-        <TextAnswer id="opening_notes" label="Anotações da abertura" value={text("opening_notes")} readOnly={readOnly} onChange={onChange} />
+        <ScriptBlock title="Se ele topar os 30 segundos" lines={THIRTY_SECONDS_SCRIPT} />
+        <TextAnswer id="google_hook_answer" label="O que o cliente disse sobre o que encontra no Google?" value={text("google_hook_answer")} readOnly={readOnly} onChange={onChange} />
+        <p className="text-sm text-muted-foreground">Agora faça somente as quatro perguntas decisórias, uma por vez, sem falar de site.</p>
       </div>
     );
   }
 
   if (step === 3) {
-    const choiceQuestions = new Set(["individual_registration", "own_inventory", "google_current_structure", "researches_store", "professional_trust"]);
-    const mentionsInstagram = text("customer_destination").toLowerCase().includes("instagram");
     return (
       <div className="space-y-5">
-        <p className="text-sm text-muted-foreground">Registre as respostas com as palavras do cliente. Elas serão usadas no resumo da virada.</p>
-        {DIAGNOSTIC_QUESTIONS.map((question) => choiceQuestions.has(question.id)
-          ? <Choice key={question.id} id={question.id} label={`${question.title} — ${replaceTokens(question.prompt)}`} value={text(question.id)} readOnly={readOnly} onChange={onChange} />
-          : <TextAnswer key={question.id} id={question.id} label={`${question.title} — ${replaceTokens(question.prompt)}`} value={text(question.id)} readOnly={readOnly} onChange={onChange} />)}
-        {mentionsInstagram && (
-          <Card className="p-4 space-y-4 border-warning/30 bg-warning/5">
-            <Badge variant="outline">Ramificação: Instagram</Badge>
-            <Choice id="instagram_full_inventory" label={INSTAGRAM_DIAGNOSIS[0]} value={text("instagram_full_inventory")} readOnly={readOnly} onChange={onChange} />
-            <Choice id="instagram_filters" label={INSTAGRAM_DIAGNOSIS[1]} value={text("instagram_filters")} readOnly={readOnly} onChange={onChange} />
-          </Card>
-        )}
+        <p className="text-sm text-muted-foreground">Faça uma pergunta por vez. Escute, registre e não antecipe a solução.</p>
+        {DIAGNOSTIC_QUESTIONS.map((question) => (
+          <div key={question.id} className="space-y-4">
+            <TextAnswer id={question.id} label={`${question.title} — ${replaceTokens(question.prompt)}`} value={text(question.id)} readOnly={readOnly} onChange={onChange} />
+            {"followUp" in question && (
+              <TextAnswer id={question.followUpId} label={`Conclusão — ${question.followUp}`} value={text(question.followUpId)} readOnly={readOnly} onChange={onChange} />
+            )}
+          </div>
+        ))}
       </div>
     );
   }
 
   if (step === 4) {
-    const suggestedSummary = TURN_SCRIPT.replace("[PLATAFORMAS]", text("advertising_platforms") || "as plataformas mencionadas");
     return (
       <div className="space-y-5">
-        <ScriptBlock title="A virada" lines={[TURN_GUIDANCE, suggestedSummary]} />
+        <ScriptBlock title="A virada" lines={[TURN_GUIDANCE, TURN_SCRIPT]} />
         <TextAnswer id="turn_summary" label="Resumo personalizado da operação" value={text("turn_summary")} readOnly={readOnly} rows={5} onChange={onChange} />
         <Choice id="summary_confirmed" label="O cliente confirmou seu entendimento?" value={text("summary_confirmed")} readOnly={readOnly} onChange={onChange} />
       </div>
@@ -190,8 +196,6 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
     return (
       <div className="space-y-5">
         <ScriptBlock title="Apresentação da solução" lines={SOLUTION_SCRIPT} />
-        <ScriptBlock title="Criar valor" lines={VALUE_SCRIPT} />
-        {text("social_proof") && <ScriptBlock title="Prova social preparada" lines={[text("social_proof")]} />}
         <TextAnswer id="solution_reaction" label="Reação e observações do cliente" value={text("solution_reaction")} readOnly={readOnly} onChange={onChange} />
       </div>
     );
@@ -262,7 +266,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
       <TextAnswer id="final_notes" label="Resumo final da ligação" value={text("final_notes")} readOnly={readOnly} rows={5} onChange={onChange} />
       <ScriptBlock title="Frases centrais" lines={CENTRAL_PHRASES} />
       <Card className="p-4 text-sm bg-success/5 border-success/20">
-        <strong>Objetivo final:</strong> identificar o decisor → gerar interesse → diagnosticar → fazer o dono perceber a oportunidade → marcar uma demonstração.
+        <strong>Objetivo final:</strong> {FINAL_OBJECTIVE}
       </Card>
     </div>
   );

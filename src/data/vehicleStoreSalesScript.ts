@@ -1,5 +1,6 @@
 export const VEHICLE_STORE_SCRIPT_KEY = "vehicle_store";
-export const VEHICLE_STORE_SCRIPT_VERSION = 1;
+export const VEHICLE_STORE_SCRIPT_VERSION = 2;
+export const DEFAULT_STORE_OBSERVATION = "vocês não têm um site próprio, só divulgam pelo Instagram e pelas plataformas de anúncio";
 
 export function isVehicleStoreNiche(niche?: string | null) {
   const normalized = (niche ?? "")
@@ -16,8 +17,8 @@ export function isVehicleStoreNiche(niche?: string | null) {
 
 export const CALL_OBJECTIVE = {
   title: "Objetivo da ligação",
-  description: "Identificar o decisor, gerar interesse em 30 segundos, diagnosticar a operação e marcar uma demonstração. A ligação fria não precisa fechar a venda — precisa vender o próximo passo.",
-  change: "A abertura entrega valor direto com uma observação concreta sobre a loja. O compromisso pedido é de apenas 30 segundos.",
+  description: "Identificar o decisor, gerar interesse rapidamente, fazer o próprio lojista perceber uma lacuna na presença online da loja e marcar uma demonstração. A ligação fria não precisa fechar a venda — precisa vender o próximo passo.",
+  change: "O diagnóstico tem somente quatro perguntas decisórias. Não fale de site durante as perguntas: primeiro faça o lojista reconhecer a situação; depois apresente o site como solução.",
 };
 
 export const OPENING_SCRIPT = [
@@ -29,12 +30,13 @@ export const OPENING_SCRIPT = [
 export const THIRTY_SECONDS_SCRIPT = [
   "Show de bola. A maioria das lojas que eu falo hoje já vende bem e já tem movimento — então essa ligação não é sobre “vocês precisam vender mais”.",
   "É sobre uma coisa específica: quando alguém pesquisa o nome da loja de vocês no Google antes de fechar negócio, o que essa pessoa encontra?",
+  "Deixe o cliente responder. Esse é o gancho para iniciar as quatro perguntas sem antecipar a solução.",
 ];
 
 export const DECISION_MAKER_GUIDANCE = {
   owner: {
     label: "Proprietário / responsável",
-    script: "Perfeito, então é contigo mesmo que eu queria falar. Siga com a abertura de 30 segundos.",
+    script: "Perfeito, então é contigo mesmo que eu queria falar.",
   },
   manager: {
     label: "Gerente / comercial",
@@ -55,74 +57,40 @@ export const RECEPTION_QUESTION_RESPONSE = "É sobre a presença online da loja 
 export const DIAGNOSTIC_QUESTIONS = [
   {
     id: "customer_origin",
-    title: "1. De onde vêm os clientes",
-    prompt: "Hoje, [NOME], de onde vem a maior parte dos clientes de vocês? É mais indicação, Instagram, Google ou plataformas de anúncio?",
-  },
-  {
-    id: "advertising_platforms",
-    title: "Plataformas utilizadas",
-    prompt: "E vocês anunciam os veículos em quais plataformas hoje?",
-  },
-  {
-    id: "individual_registration",
-    title: "2. Dependência das plataformas",
-    prompt: "Quando vocês colocam um veículo novo no estoque, cadastram ele nessas plataformas individualmente?",
+    title: "1. Onde o cliente chega",
+    prompt: "Hoje, quando alguém conhece vocês pela internet, de onde normalmente vem esse cliente: Instagram, Google ou plataformas de anúncio?",
   },
   {
     id: "own_inventory",
-    title: "Estoque em espaço próprio",
-    prompt: "Hoje vocês têm algum lugar próprio da loja onde conseguem concentrar esse estoque inteiro?",
+    title: "2. Existe uma vitrine própria?",
+    prompt: "Hoje vocês têm algum lugar próprio onde o cliente consegue ver todo o estoque da loja, organizado por modelo, preço e quilometragem?",
   },
   {
     id: "customer_destination",
-    title: "3. Fazer o cliente pensar",
-    prompt: "Se eu encontrar um carro de vocês em uma plataforma e quiser conhecer melhor a loja, pra onde você me mandaria?",
-  },
-  {
-    id: "google_expectation",
-    title: "4. Google",
-    prompt: "Se eu pesquisar o nome da loja no Google, o que você gostaria que eu encontrasse primeiro?",
-  },
-  {
-    id: "google_current_structure",
-    title: "Estrutura atual no Google",
-    prompt: "Hoje vocês têm um espaço próprio onde esse cliente consegue conhecer a loja, ver o estoque e entrar em contato?",
+    title: "3. Para onde você manda o cliente?",
+    prompt: "Se eu encontrar um carro de vocês numa plataforma hoje e quiser conhecer melhor a loja antes de chamar no WhatsApp, pra onde você me mandaria?",
   },
   {
     id: "researches_store",
-    title: "5. Confiança",
-    prompt: "Quando alguém vai comprar um veículo de ticket mais alto, você acha que esse cliente pesquisa a loja antes de fechar negócio?",
-  },
-  {
-    id: "professional_trust",
-    title: "Apresentação profissional",
-    prompt: "Se esse cliente encontrar uma apresentação profissional da loja, com veículos, fotos, informações, localização e WhatsApp, isso ajuda a passar mais confiança?",
+    title: "4. O cliente pesquisa antes de comprar?",
+    prompt: "Pensando num cliente que está prestes a gastar R$ 50, R$ 80 ou R$ 100 mil num carro: você acha que ele pesquisa o nome da loja antes de fechar negócio?",
+    followUpId: "search_structure",
+    followUp: "E quando ele pesquisar vocês, hoje ele encontra uma estrutura própria da loja com os veículos, informações, localização e uma forma direta de entrar em contato?",
   },
 ] as const;
 
-export const INSTAGRAM_DIAGNOSIS = [
-  "No Instagram eu consigo encontrar facilmente todos os veículos disponíveis hoje?",
-  "Consigo filtrar por modelo, preço, marca e quilometragem?",
-];
+export const TURN_GUIDANCE = "Depois das quatro perguntas, não faça outro interrogatório. Resuma a situação e conecte com a solução.";
 
-export const TURN_GUIDANCE = "Antes de apresentar a solução, resuma o que o cliente disse usando as palavras dele e confirme se o entendimento está correto.";
-
-export const TURN_SCRIPT = "Deixa eu ver se eu entendi. Hoje vocês já anunciam nos lugares que funcionam, têm Instagram, trabalham com [PLATAFORMAS], e isso já traz clientes. Só que o cliente que encontra vocês nessas plataformas ainda depende delas para conhecer melhor a loja e visualizar o estoque. É isso?";
+export const TURN_SCRIPT = "Então é exatamente esse o ponto que eu queria te mostrar. Vocês já têm os anúncios, já têm Instagram e já têm os carros. O que eu faço é criar o espaço próprio da loja para receber esse cliente quando ele quiser conhecer vocês melhor.";
 
 export const SOLUTION_SCRIPT = [
-  "Perfeito. Então é exatamente aí que entra o que a gente faz.",
-  "A gente não quer substituir o Usado Fácil, OLX, Instagram ou qualquer plataforma que já funciona. As plataformas continuam trazendo o cliente; o site vira a vitrine própria da loja.",
-  "O cliente encontra o carro, entra no site, visualiza veículos, fotos, preço, quilometragem, opcionais, localização e já fala diretamente pelo WhatsApp.",
+  "O cliente consegue entrar, ver os veículos, fotos, preço, quilometragem, localização e já falar diretamente com vocês pelo WhatsApp.",
+  "As plataformas continuam trazendo o cliente; o site vira a vitrine própria da loja.",
 ];
 
-export const VALUE_SCRIPT = [
-  "Vocês estão vendendo veículos, não um produto de R$ 50. É comum o cliente pesquisar a empresa antes de mandar mensagem ou ir até a loja.",
-  "A questão não é “preciso de um site pra vender meus carros?”, porque vocês já vendem. A questão é: quando o cliente pesquisar a loja, vocês têm uma estrutura própria pra recebê-lo?",
-];
+export const DEMO_INVITATION = "Eu não quero tentar te vender nada agora. Quero mostrar isso funcionando na prática. Consigo pegar a identidade da loja, organizar os veículos e criar essa estrutura direcionada pra gerar contato. É uma apresentação rápida pelo Meet, de 15 a 20 minutos. Eu tenho [OPÇÃO 1] e também [OPÇÃO 2]. Qual dos dois fica melhor pra você?";
 
-export const DEMO_INVITATION = "Eu não quero tentar te vender nada agora. Quero mostrar como estruturamos isso para lojas de veículos. É uma apresentação rápida pelo Meet, de 15 a 20 minutos. Eu tenho um horário [OPÇÃO 1] e outro [OPÇÃO 2]. Qual fica melhor pra você?";
-
-export const DEMO_CONFIRMATION = "Fechou. Vou mandar o convite e algumas informações antes da reunião. A ideia é você olhar o projeto funcionando e dizer sinceramente se enxerga utilidade. Se fizer sentido, conversamos sobre valores e implementação; se não, sem problema.";
+export const DEMO_CONFIRMATION = "Fechou. Vou mandar o convite e algumas informações antes da reunião. A ideia é você olhar o projeto funcionando e me dizer sinceramente se enxerga utilidade pra loja. Se fizer sentido, conversamos sobre valores e implementação; se não, sem problema nenhum.";
 
 export const OBJECTIONS = [
   {
@@ -132,23 +100,23 @@ export const OBJECTIONS = [
   },
   {
     id: "platform",
-    label: "Eu já anuncio no Usado Fácil.",
-    response: "Perfeito, e eu não mexeria nisso. Se o cliente encontrar teu carro no Usado Fácil e pesquisar o nome da tua loja no Google, o que você gostaria que aparecesse pra ele?",
+    label: "Eu já anuncio nas plataformas.",
+    response: "Perfeito, e eu não mexeria nisso. As plataformas continuam trazendo o cliente. A questão é: se esse cliente pesquisar o nome da tua loja depois de encontrar um carro, o que você gostaria que aparecesse pra ele?",
   },
   {
     id: "sells_enough",
     label: "Não preciso de site, já vendo bastante.",
-    response: "E isso é ótimo. Não estou tentando resolver falta de vendas, mas entender se existe oportunidade de melhorar como esses clientes conhecem a loja antes de comprar. A ideia é complementar, não substituir.",
+    response: "E isso é ótimo. Eu não estou tentando resolver falta de vendas. A questão é se, quando alguém que já está interessado em comprar um carro pesquisar a loja, vocês têm uma estrutura própria pra receber esse cliente. A ideia é complementar, não substituir.",
   },
   {
     id: "customer_no_site",
     label: "Meu cliente não entra em site.",
-    response: "Pode ser que uma parte não entre. Mas quando alguém está prestes a comprar um carro, você acha que essa pessoa pesquisa a loja antes de fechar? É nesse momento que o site precisa estar disponível.",
+    response: "Pode ser que uma parte não entre mesmo. Mas quando alguém está prestes a comprar um carro de R$ 50, R$ 80 ou R$ 100 mil, você acha que essa pessoa pesquisa a loja antes de fechar? É exatamente nesse momento que essa estrutura precisa estar disponível.",
   },
   {
     id: "price",
     label: "Quanto custa?",
-    response: "Antes de passar um valor, prefiro entender o que faz sentido para a loja. Pode ser uma vitrine simples ou uma estrutura completa. Na demonstração eu mostro exatamente o projeto e então apresento o investimento.",
+    response: "Antes de te passar um valor, eu prefiro te mostrar o que estamos fazendo e entender o que faz sentido pra tua loja. Na demonstração eu mostro funcionando e aí te passo o investimento.",
   },
 ] as const;
 
@@ -159,7 +127,12 @@ export const CENTRAL_PHRASES = [
 ];
 
 export const PRE_CALL_CHECKLIST = [
-  "Olhar Instagram/Google por 30 segundos e anotar uma observação real.",
-  "Ter um resultado concreto de outro cliente para usar como prova social.",
-  "Lembrar: o objetivo é vender os 15–20 minutos da demonstração.",
+  "Olhar Instagram/Google da loja por 30 segundos e anotar uma observação real.",
+  "Identificar quem é o decisor.",
+  "Fazer somente as quatro perguntas, sem transformar a ligação em interrogatório.",
+  "Não falar de site antes do lojista perceber a lacuna.",
+  "Ter dois horários prontos para a demonstração.",
+  "Lembrar: o objetivo não é vender o site na ligação; é vender os 15–20 minutos da demonstração.",
 ];
+
+export const FINAL_OBJECTIVE = "Identificar o decisor → fazer quatro perguntas → fazer o lojista perceber a lacuna → apresentar o site como solução → marcar a demonstração. Cold call não precisa fechar a venda. Precisa vender o próximo passo.";

@@ -6,17 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
+import { DEFAULT_STORE_OBSERVATION } from "@/data/vehicleStoreSalesScript";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import type { LeadScriptFlow, SalesFlowAnswers, SalesFlowAnswerValue, SalesFlowLead } from "@/types/salesFlow";
 
 const STEP_TITLES = [
   "Preparação",
-  "Identificar o decisor",
-  "Abertura",
-  "Diagnóstico",
+  "Abertura e decisor",
+  "Gancho dos 30 segundos",
+  "Quatro perguntas",
   "A virada",
-  "Solução e valor",
+  "Apresentação da solução",
   "Demonstração",
   "Objeções",
   "Resultado",
@@ -61,13 +62,27 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
   }
 
   function validateCurrentStep() {
-    if (step === 0 && !String(answers.specific_observation ?? "").trim()) {
-      toast.error("Informe uma observação real sobre a loja.");
-      return false;
-    }
     if (step === 1 && !answers.contact_role) {
       toast.error("Informe quem atendeu a ligação.");
       return false;
+    }
+    if (step === 1) {
+      const contactRole = String(answers.contact_role);
+      if (contactRole === "manager" && !answers.participates_decisions) {
+        toast.error("Informe se o gerente participa das decisões.");
+        return false;
+      }
+      const needsDecisionMaker = contactRole === "salesperson"
+        || contactRole === "reception"
+        || (contactRole === "manager" && answers.participates_decisions === "no");
+      if (needsDecisionMaker && !answers.reached_decision_maker) {
+        toast.error("Informe se foi possível falar com o responsável.");
+        return false;
+      }
+      if ((!needsDecisionMaker || answers.reached_decision_maker === "yes") && !answers.accepted_thirty_seconds) {
+        toast.error("Informe se a pessoa aceitou ouvir os 30 segundos.");
+        return false;
+      }
     }
     if (step === STEP_TITLES.length - 1 && !answers.call_outcome) {
       toast.error("Informe o resultado da ligação.");
@@ -80,10 +95,14 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
     if (!flow || !lead) return false;
     setSaving(true);
     const completedAt = complete ? new Date().toISOString() : null;
+    const normalizedAnswers: SalesFlowAnswers = {
+      ...answers,
+      specific_observation: String(answers.specific_observation ?? "").trim() || DEFAULT_STORE_OBSERVATION,
+    };
     const { data, error } = await supabase
       .from("lead_script_flows")
       .update({
-        answers: answers as Json,
+        answers: normalizedAnswers as Json,
         current_step: nextStep,
         status: complete ? "completed" : "in_progress",
         completed_at: completedAt,
@@ -99,11 +118,12 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
     }
 
     const savedFlow = data as LeadScriptFlow;
+    setAnswers(normalizedAnswers);
     onSaved(savedFlow);
 
     if (complete) {
-      const outcome = String(answers.call_outcome ?? "");
-      const finalNotes = String(answers.final_notes ?? "").trim();
+      const outcome = String(normalizedAnswers.call_outcome ?? "");
+      const finalNotes = String(normalizedAnswers.final_notes ?? "").trim();
       const body = `Script Flow concluído · ${OUTCOME_LABELS[outcome] ?? outcome}${finalNotes ? ` · ${finalNotes}` : ""}`;
       const { error: activityError } = await supabase.from("lead_activities").insert({
         lead_id: lead.id,
@@ -138,7 +158,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
       || (contactRole === "manager" && answers.participates_decisions === "no");
     const nextStep = step === 1 && needsDecisionMaker && answers.reached_decision_maker !== "yes"
       ? 8
-      : step === 2 && answers.accepted_thirty_seconds === "no"
+      : step === 1 && answers.accepted_thirty_seconds === "no"
         ? 7
         : step === 6 && answers.demo_accepted === "yes"
           ? 8
@@ -158,7 +178,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
       : step === 8 && answers.demo_accepted === "yes"
         ? 6
         : step === 7 && answers.accepted_thirty_seconds === "no"
-          ? 2
+          ? 1
           : Math.max(0, step - 1);
     if (readOnly) {
       setStep(previousStep);
