@@ -4,6 +4,7 @@ import { useApp } from "@/store/AppStore";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   CheckCircle2, Clock, AlertTriangle, ListTodo, TrendingUp, Users as UsersIcon,
   Sparkles, Flame, Target, ArrowUpRight, Zap, Crown, Activity, Lock
@@ -13,24 +14,28 @@ import { relativeDue, formatSeconds } from "@/lib/format";
 import { PeriodFilter, type Period, inPeriod } from "@/components/PeriodFilter";
 import { canViewFinancial } from "@/lib/roleVisibility";
 import { supabase } from "@/integrations/supabase/client";
+import SalesDashboard, { type SalesDashboardScope } from "@/pages/SalesDashboard";
 
 export default function Dashboard() {
   const { tasks, clients, users, timeEntries, currentUser } = useApp();
   const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>({ preset: "week" });
   const [salesLeads, setSalesLeads] = useState<any[]>([]);
+  const [focus, setFocus] = useState<"tasks" | "sales">("tasks");
+  const [dataScope, setDataScope] = useState<SalesDashboardScope>("all");
 
   const isLeader = currentUser.role === "leader";
+  const showTeamOverview = isLeader && dataScope === "all";
 
   useEffect(() => {
     let query = supabase.from("leads").select("id,owner_id,time_spent_seconds,created_at,updated_at");
-    if (!isLeader && currentUser.role !== "manager") query = query.eq("owner_id", currentUser.id);
+    if (!showTeamOverview) query = query.eq("owner_id", currentUser.id);
     query.then(({ data }) => setSalesLeads(data ?? []));
-  }, [currentUser.id, currentUser.role, isLeader]);
+  }, [currentUser.id, showTeamOverview]);
 
   const myScope = useMemo(
-    () => isLeader ? tasks : tasks.filter(t => t.assignee_id === currentUser.id),
-    [tasks, isLeader, currentUser.id]
+    () => showTeamOverview ? tasks : tasks.filter(t => t.assignee_id === currentUser.id),
+    [tasks, showTeamOverview, currentUser.id]
   );
 
   const inRange = useMemo(
@@ -49,14 +54,14 @@ export default function Dashboard() {
   // Tempo lançado no período
   const periodSeconds = useMemo(() => {
     const taskSeconds = timeEntries
-      .filter(e => isLeader || e.user_id === currentUser.id)
+      .filter(e => showTeamOverview || e.user_id === currentUser.id)
       .filter(e => inPeriod(e.logged_at, period))
       .reduce((s, e) => s + e.seconds, 0);
     const salesSeconds = salesLeads
       .filter(l => inPeriod(l.updated_at ?? l.created_at, period))
       .reduce((s, l) => s + Number(l.time_spent_seconds || 0), 0);
     return taskSeconds + salesSeconds;
-  }, [timeEntries, period, isLeader, currentUser.id, salesLeads]);
+  }, [timeEntries, period, showTeamOverview, currentUser.id, salesLeads]);
 
   // Receita estimada do mês (líder)
   const monthlyRevenue = useMemo(() => clients.reduce((s, c) => s + (c.monthly_fee ?? 0), 0), [clients]);
@@ -67,7 +72,7 @@ export default function Dashboard() {
     const d = new Date(today.getTime() - (13 - i) * 86400000);
     const next = new Date(d.getTime() + 86400000);
     const sec = timeEntries
-      .filter(e => isLeader || e.user_id === currentUser.id)
+      .filter(e => showTeamOverview || e.user_id === currentUser.id)
       .filter(e => {
         const t = new Date(e.logged_at).getTime();
         return t >= d.getTime() && t < next.getTime();
@@ -76,7 +81,7 @@ export default function Dashboard() {
       && new Date(t.updated_at).getTime() >= d.getTime()
       && new Date(t.updated_at).getTime() < next.getTime()).length;
     return { dia: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), horas: +(sec/3600).toFixed(1), concluidas: dn };
-  }), [timeEntries, inRange, isLeader, currentUser.id]);
+  }), [timeEntries, inRange, showTeamOverview, currentUser.id]);
 
   const byUser = useMemo(() => users.filter(u => u.role !== "leader" && u.role !== "commercial").map(u => {
     const ut = inRange.filter(t => t.assignee_id === u.id);
@@ -133,8 +138,39 @@ export default function Dashboard() {
     return "Boa noite";
   })();
 
+  const leaderControls = isLeader && (
+    <Card className="p-2 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex gap-2">
+        <Button size="sm" variant={focus === "tasks" ? "default" : "ghost"} onClick={() => setFocus("tasks")}>
+          <ListTodo className="w-4 h-4 mr-2" /> Tarefas
+        </Button>
+        <Button size="sm" variant={focus === "sales" ? "default" : "ghost"} onClick={() => setFocus("sales")}>
+          <TrendingUp className="w-4 h-4 mr-2" /> Vendas
+        </Button>
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" variant={dataScope === "all" ? "secondary" : "ghost"} onClick={() => setDataScope("all")}>
+          Visão geral
+        </Button>
+        <Button size="sm" variant={dataScope === "mine" ? "secondary" : "ghost"} onClick={() => setDataScope("mine")}>
+          Meus dados
+        </Button>
+      </div>
+    </Card>
+  );
+
+  if (isLeader && focus === "sales") {
+    return (
+      <div className="max-w-7xl mx-auto">
+        {leaderControls}
+        <SalesDashboard scope={dataScope} embedded />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
+      {leaderControls}
       {/* HERO */}
       <Card className="relative overflow-hidden p-8 mb-6 border-0 bg-gradient-to-br from-[hsl(var(--card))] via-[hsl(var(--card))] to-[hsl(var(--accent)/0.08)]">
         <div className="absolute -right-10 -top-10 w-80 h-80 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
@@ -146,10 +182,10 @@ export default function Dashboard() {
               <p className="text-xs uppercase tracking-[0.2em] text-accent font-semibold">{greeting}, {currentUser.name.split(" ")[0]}</p>
             </div>
             <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-              {isLeader ? "Operação em movimento." : "Vamos fazer acontecer."}
+              {showTeamOverview ? "Operação em movimento." : "Vamos fazer acontecer."}
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl">
-              {isLeader
+              {showTeamOverview
                 ? `${stats.done} entregas concluídas, ${formatSeconds(periodSeconds)} de trabalho registrado e ${clients.length} clientes ativos.`
                 : `Você tem ${stats.progress} tarefas em andamento e ${formatSeconds(periodSeconds)} lançados no período.`}
             </p>
@@ -160,7 +196,7 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          {canViewFinancial(currentUser) && (
+          {canViewFinancial(currentUser) && showTeamOverview && (
             <div className="flex flex-col items-end">
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Receita recorrente</p>
               <p className="font-display text-4xl font-bold text-gradient tabular-nums">R$ {monthlyRevenue.toLocaleString("pt-BR")}</p>
@@ -267,7 +303,7 @@ export default function Dashboard() {
       </div>
 
       {/* LIDER: top performer + risco */}
-      {isLeader && (
+      {showTeamOverview && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <Card className="p-6 relative overflow-hidden">
             <div className="absolute inset-0 gradient-glow opacity-40 pointer-events-none" />
@@ -326,7 +362,7 @@ export default function Dashboard() {
 
       {/* Equipe + recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {isLeader && (
+        {showTeamOverview && (
           <Card className="p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -349,7 +385,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Card className={`p-6 ${isLeader ? "" : "lg:col-span-3"}`}>
+        <Card className={`p-6 ${showTeamOverview ? "" : "lg:col-span-3"}`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-semibold flex items-center gap-2"><Target className="w-4 h-4" /> Atividade recente</h3>
           </div>

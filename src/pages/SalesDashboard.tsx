@@ -12,17 +12,26 @@ import { PeriodFilter, type Period, inPeriod } from "@/components/PeriodFilter";
 const BRL = (v: number) => `R$ ${(v ?? 0).toLocaleString("pt-BR")}`;
 function waLink(n?: string | null) { if (!n) return null; const d = n.replace(/\D/g, ""); return d ? `https://wa.me/${d}` : null; }
 
-export default function SalesDashboard() {
+export type SalesDashboardScope = "all" | "mine";
+
+interface SalesDashboardProps {
+  scope?: SalesDashboardScope;
+  embedded?: boolean;
+}
+
+export default function SalesDashboard({ scope = "all", embedded = false }: SalesDashboardProps) {
   const { user } = useAuth();
   const [leads, setLeads] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [period, setPeriod] = useState<Period>({ preset: "month" });
+  const isLeader = user?.role === "leader";
+  const effectiveScope: SalesDashboardScope = isLeader ? scope : "mine";
 
   async function load() {
     let leadQuery = supabase.from("leads").select("*");
     let eventsQuery = supabase.from("sales_events").select("*").gte("start_at", new Date().toISOString()).order("start_at").limit(5);
-    if (user?.role === "commercial") {
+    if (effectiveScope === "mine" && user?.id) {
       leadQuery = leadQuery.eq("owner_id", user.id);
       eventsQuery = eventsQuery.eq("owner_id", user.id);
     }
@@ -35,7 +44,7 @@ export default function SalesDashboard() {
     if (s.data) setStages(s.data);
     if (e.data) setEvents(e.data);
   }
-  useEffect(() => { load(); }, [user?.id, user?.role]);
+  useEffect(() => { load(); }, [user?.id, effectiveScope]);
   useEffect(() => {
     const ch = supabase
       .channel("sales-dashboard-realtime")
@@ -44,7 +53,7 @@ export default function SalesDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "sales_events" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user?.id, user?.role]);
+  }, [user?.id, effectiveScope]);
 
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
 
@@ -63,8 +72,12 @@ export default function SalesDashboard() {
   const upcomingFollowups = useMemo(() => leads.filter(l => l.next_followup_at).sort((a, b) => a.next_followup_at.localeCompare(b.next_followup_at)).slice(0, 5), [leads]);
 
   return (
-    <div className="p-4 max-w-7xl mx-auto">
-      <PageHeader title="Comercial" subtitle={user?.role === "leader" ? "Visão geral de todo o comercial." : "Visão geral do seu funil de vendas."} actions={<PeriodFilter value={period} onChange={setPeriod} />} />
+    <div className={`${embedded ? "" : "p-4"} max-w-7xl mx-auto`}>
+      <PageHeader
+        title="Comercial"
+        subtitle={isLeader && effectiveScope === "all" ? "Visão geral de todo o comercial." : "Visão geral do seu funil de vendas."}
+        actions={<PeriodFilter value={period} onChange={setPeriod} />}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card className="p-5"><div className="text-xs text-muted-foreground flex items-center gap-1"><Target className="w-3 h-3" /> Leads no funil</div><p className="font-display text-2xl font-bold mt-2">{openLeads.length}</p></Card>

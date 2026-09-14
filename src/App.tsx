@@ -14,16 +14,11 @@ import Kanban from "./pages/Kanban";
 import Reports from "./pages/Reports";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
-import Team from "./pages/Team";
-import TeamMemberDetail from "./pages/TeamMemberDetail";
-import TeamsDB from "./pages/TeamsDB";
 import Collaborators from "./pages/Collaborators";
-import Finance from "./pages/Finance";
 import ReportDetail from "./pages/ReportDetail";
 import TimeTracking from "./pages/TimeTracking";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-import Services from "./pages/Services";
 import SalesFunnel from "./pages/SalesFunnel";
 import SalesAgenda from "./pages/SalesAgenda";
 import Leads from "./pages/Leads";
@@ -66,12 +61,7 @@ const App = () => (
                       <Route path="/reports/:type" element={<ReportDetail />} />
                       <Route path="/clients" element={<Clients />} />
                       <Route path="/clients/:id" element={<ClientDetail />} />
-                      <Route path="/services" element={<Services />} />
-                      <Route path="/team" element={<Team />} />
-                      <Route path="/team/:id" element={<TeamMemberDetail />} />
-                      <Route path="/teams" element={<TeamsDB />} />
                       <Route path="/collaborators" element={<Collaborators />} />
-                      <Route path="/finance" element={<Finance />} />
                       <Route path="/time" element={<TimeTracking />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/sales" element={<SalesFunnel />} />

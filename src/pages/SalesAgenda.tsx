@@ -46,7 +46,7 @@ export default function SalesAgenda() {
   async function load() {
     let eventsQuery = supabase.from("sales_events").select("*").order("start_at");
     let leadsQuery = supabase.from("leads").select("id,name");
-    if (user?.role === "commercial") {
+    if (user?.role !== "leader" && user?.id) {
       eventsQuery = eventsQuery.eq("owner_id", user.id);
       leadsQuery = leadsQuery.eq("owner_id", user.id);
     }

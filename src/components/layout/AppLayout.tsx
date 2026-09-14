@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, KanbanSquare, BarChart3, Users, UserCog, Timer, Search, Moon, Sun, Database, Sparkles, LogOut, Wallet, Network, UserCircle2, Menu, UserPlus, Briefcase, Camera, Target, CalendarDays } from "lucide-react";
+import { LayoutDashboard, KanbanSquare, BarChart3, Users, Timer, Search, Moon, Sun, Database, Sparkles, LogOut, UserCircle2, Menu, UserPlus, Target, CalendarDays } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "@/components/ThemeProvider";
@@ -21,11 +21,7 @@ const nav: NavItem[] = [
   { to: "/kanban", label: "Kanban", icon: KanbanSquare, roles: ["leader","manager","collaborator"] },
   { to: "/reports", label: "Relatórios", icon: BarChart3, roles: ["leader","manager","collaborator"] },
   { to: "/clients", label: "Clientes", icon: Users, roles: ["leader","manager","collaborator"] },
-  { to: "/team", label: "Equipe", icon: UserCog, roles: ["leader","manager"] },
   { to: "/collaborators", label: "Colaboradores", icon: UserPlus, roles: ["leader","manager"] },
-  { to: "/teams", label: "Times", icon: Network, roles: ["leader","manager"] },
-  { to: "/services", label: "Serviços", icon: Briefcase, roles: ["leader"] },
-  { to: "/finance", label: "Financeiro", icon: Wallet, roles: ["leader"] },
   { to: "/time", label: "Tempo", icon: Timer, roles: ["leader","manager","collaborator"] },
   // Comercial
   { to: "/sales/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["commercial"] },

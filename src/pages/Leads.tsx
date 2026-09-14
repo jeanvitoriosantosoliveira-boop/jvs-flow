@@ -152,7 +152,7 @@ export default function Leads() {
         source: form.source?.trim() || null,
         estimated_value: form.estimated_value || 0,
         stage_id: form.stage_id,
-        owner_id: form.owner_id || null,
+        owner_id: isLeader ? (form.owner_id || null) : user?.id,
         notes: form.notes?.trim() || null,
         next_followup_at: form.next_followup_at || null,
       };
@@ -387,16 +387,19 @@ export default function Leads() {
               </div>
               <div>
                 <Label>Comercial *</Label>
-                <Select value={form.owner_id || ""} onValueChange={(v) => setForm({ ...form, owner_id: v })}>
+                <Select
+                  value={form.owner_id || ""}
+                  onValueChange={(v) => setForm({ ...form, owner_id: v })}
+                  disabled={!isLeader}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Próprio usuário logado sempre disponível */}
                     {user && !users.filter(u => u.role === "commercial").find(u => u.id === user.id) && (
                       <SelectItem value={user.id}>{user.name} (eu)</SelectItem>
                     )}
-                    {users.filter(u => u.role === "commercial").map(u => (
+                    {users.filter(u => u.role === "commercial" && (isLeader || u.id === user?.id)).map(u => (
                       <SelectItem key={u.id} value={u.id}>{u.id === user?.id ? `${u.name} (eu)` : u.name}</SelectItem>
                     ))}
                   </SelectContent>
