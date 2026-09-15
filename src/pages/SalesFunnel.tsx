@@ -16,7 +16,7 @@ import { Plus, MessageCircle, Instagram, Phone, Calendar, Trash2, Pencil, Save, 
 import { toast } from "sonner";
 import { PeriodFilter, type Period, inPeriod } from "@/components/PeriodFilter";
 import { SalesFlowDialog } from "@/components/SalesFlowDialog";
-import { isVehicleStoreNiche, VEHICLE_STORE_SCRIPT_KEY, VEHICLE_STORE_SCRIPT_VERSION } from "@/data/vehicleStoreSalesScript";
+import { getSalesScript, getSalesScriptForNiche } from "@/data/salesScripts";
 import type { Json } from "@/integrations/supabase/types";
 import type { LeadScriptFlow } from "@/types/salesFlow";
 
@@ -171,13 +171,18 @@ export default function SalesFunnel() {
 
   async function startScriptFlow() {
     if (!openLead || !user?.id) return;
+    const script = getSalesScriptForNiche(leadDraft.niche);
+    if (!script) {
+      toast.error("Não existe Script Flow para o nicho deste lead.");
+      return;
+    }
     const { data, error } = await supabase
       .from("lead_script_flows")
       .insert({
         lead_id: openLead.id,
         created_by: user.id,
-        script_key: VEHICLE_STORE_SCRIPT_KEY,
-        script_version: VEHICLE_STORE_SCRIPT_VERSION,
+        script_key: script.key,
+        script_version: script.version,
         answers: {} as Json,
       })
       .select()
@@ -483,15 +488,15 @@ export default function SalesFunnel() {
                     size="sm"
                     className="gap-2"
                     onClick={startScriptFlow}
-                    disabled={!isVehicleStoreNiche(leadDraft.niche)}
+                    disabled={!getSalesScriptForNiche(leadDraft.niche)}
                   >
                     <Play className="w-4 h-4" /> Iniciar Script Flow
                   </Button>
                 </div>
 
-                {!isVehicleStoreNiche(leadDraft.niche) && (
+                {!getSalesScriptForNiche(leadDraft.niche) && (
                   <p className="text-xs text-warning bg-warning/5 border border-warning/20 rounded-lg p-3">
-                    O roteiro disponível é exclusivo para o nicho “Lojas de veículos”.
+                    Existem roteiros para “Lojas de veículos” e “Móveis Planejados”.
                   </p>
                 )}
 
@@ -504,6 +509,7 @@ export default function SalesFunnel() {
                     {leadFlows.map((flow) => {
                       const completed = flow.status === "completed";
                       const progress = Math.round(((Math.min(flow.current_step, 8) + 1) / 9) * 100);
+                      const flowScript = getSalesScript(flow.script_key);
                       return (
                         <button
                           type="button"
@@ -512,7 +518,7 @@ export default function SalesFunnel() {
                           className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/30 transition"
                         >
                           <div>
-                            <p className="text-sm font-medium">{completed ? "Ligação concluída" : "Ligação em andamento"}</p>
+                            <p className="text-sm font-medium">{flowScript.title} · {completed ? "Ligação concluída" : "Ligação em andamento"}</p>
                             <p className="text-xs text-muted-foreground">{new Date(flow.started_at).toLocaleString("pt-BR")} · versão {flow.script_version}</p>
                           </div>
                           <div className="text-right shrink-0">

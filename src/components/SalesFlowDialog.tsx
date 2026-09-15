@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { DEFAULT_STORE_OBSERVATION } from "@/data/vehicleStoreSalesScript";
+import { getSalesScript } from "@/data/salesScripts";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import type { LeadScriptFlow, SalesFlowAnswers, SalesFlowAnswerValue, SalesFlowLead } from "@/types/salesFlow";
@@ -50,6 +50,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const readOnly = flow?.status === "completed";
+  const script = getSalesScript(flow?.script_key ?? "");
 
   useEffect(() => {
     if (!open || !flow) return;
@@ -97,7 +98,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
     const completedAt = complete ? new Date().toISOString() : null;
     const normalizedAnswers: SalesFlowAnswers = {
       ...answers,
-      specific_observation: String(answers.specific_observation ?? "").trim() || DEFAULT_STORE_OBSERVATION,
+      specific_observation: String(answers.specific_observation ?? "").trim() || script.defaultObservation,
     };
     const { data, error } = await supabase
       .from("lead_script_flows")
@@ -214,7 +215,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
           <div className="flex items-center justify-between gap-3 pr-6">
             <div>
               <DialogTitle>Script Flow · {lead.name}</DialogTitle>
-              <p className="text-xs text-muted-foreground mt-1">Etapa {step + 1} de {STEP_TITLES.length} — {STEP_TITLES[step]}</p>
+              <p className="text-xs text-muted-foreground mt-1">{script.title} · Etapa {step + 1} de {STEP_TITLES.length} — {STEP_TITLES[step]}</p>
             </div>
             <Badge variant={readOnly ? "secondary" : "outline"}>{readOnly ? "Concluído" : `${progress}%`}</Badge>
           </div>
@@ -232,7 +233,7 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 px-1 py-3">
-          <SalesFlowStep step={step} lead={lead} answers={answers} readOnly={readOnly} onChange={changeAnswer} />
+          <SalesFlowStep step={step} lead={lead} script={script} answers={answers} readOnly={readOnly} onChange={changeAnswer} />
         </div>
 
         <DialogFooter className="border-t border-border pt-4 sm:justify-between">

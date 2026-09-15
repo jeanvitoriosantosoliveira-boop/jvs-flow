@@ -6,17 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Info, Quote } from "lucide-react";
-import {
-  CALL_OBJECTIVE, CENTRAL_PHRASES, DECISION_MAKER_GUIDANCE, DEMO_CONFIRMATION,
-  DEFAULT_STORE_OBSERVATION, DEMO_INVITATION, DIAGNOSTIC_QUESTIONS, FINAL_OBJECTIVE, OBJECTIONS,
-  OPENING_SCRIPT, PRE_CALL_CHECKLIST, RECEPTION_QUESTION_RESPONSE, SOLUTION_SCRIPT,
-  THIRTY_SECONDS_CONTEXT, THIRTY_SECONDS_SCRIPT, TURN_GUIDANCE, TURN_SCRIPT,
-} from "@/data/vehicleStoreSalesScript";
 import type { SalesFlowAnswers, SalesFlowAnswerValue, SalesFlowLead } from "@/types/salesFlow";
+import type { SalesScriptDefinition } from "@/types/salesScript";
 
 interface SalesFlowStepProps {
   step: number;
   lead: SalesFlowLead;
+  script: SalesScriptDefinition;
   answers: SalesFlowAnswers;
   readOnly: boolean;
   onChange: (key: string, value: SalesFlowAnswerValue) => void;
@@ -84,27 +80,27 @@ function Choice({ id, label, value, readOnly, onChange }: {
   );
 }
 
-export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: SalesFlowStepProps) {
+export function SalesFlowStep({ step, lead, script, answers, readOnly, onChange }: SalesFlowStepProps) {
   const text = (key: string) => typeof answers[key] === "string" ? answers[key] as string : "";
   const selectedObjections = Array.isArray(answers.objections) ? answers.objections as string[] : [];
-  const contactRole = text("contact_role") as keyof typeof DECISION_MAKER_GUIDANCE | "";
+  const contactRole = text("contact_role") as keyof SalesScriptDefinition["decisionMakerGuidance"] | "";
   const leadName = lead.name || lead.company || "responsável";
-  const observation = text("specific_observation") || DEFAULT_STORE_OBSERVATION;
+  const observation = text("specific_observation") || script.defaultObservation;
   const replaceTokens = (line: string) => line.replace("[NOME]", leadName).replace("[OBSERVAÇÃO ESPECÍFICA]", observation);
 
   if (step === 0) {
     return (
       <div className="space-y-5">
         <ContextBlock>
-          <p className="font-medium text-foreground">{CALL_OBJECTIVE.title}</p>
-          <p>{CALL_OBJECTIVE.description}</p>
-          <p className="mt-2">{CALL_OBJECTIVE.change}</p>
+          <p className="font-medium text-foreground">{script.callObjective.title}</p>
+          <p>{script.callObjective.description}</p>
+          <p className="mt-2">{script.callObjective.change}</p>
         </ContextBlock>
-        <TextAnswer id="specific_observation" label="Observação real sobre a loja (opcional)" value={text("specific_observation")} readOnly={readOnly} onChange={onChange} />
-        <ContextBlock>Se ficar vazio, será utilizado: “{DEFAULT_STORE_OBSERVATION}”.</ContextBlock>
+        <TextAnswer id="specific_observation" label="Observação real sobre a empresa (opcional)" value={text("specific_observation")} readOnly={readOnly} onChange={onChange} />
+        <ContextBlock>Se ficar vazio, será utilizado: “{script.defaultObservation}”.</ContextBlock>
         <div className="space-y-2">
           <Label>Checklist antes de ligar</Label>
-          {PRE_CALL_CHECKLIST.map((item, index) => {
+          {script.preCallChecklist.map((item, index) => {
             const key = `checklist_${index}`;
             return (
               <label key={item} className="flex items-start gap-2 text-sm">
@@ -119,20 +115,20 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   }
 
   if (step === 1) {
-    const guidance = contactRole ? DECISION_MAKER_GUIDANCE[contactRole] : null;
+    const guidance = contactRole ? script.decisionMakerGuidance[contactRole] : null;
     const needsResponsible = contactRole === "salesperson" || contactRole === "reception" || (contactRole === "manager" && text("participates_decisions") === "no");
     const canPitch = contactRole === "owner"
       || (contactRole === "manager" && !!text("participates_decisions") && text("participates_decisions") !== "no")
       || (needsResponsible && text("reached_decision_maker") === "yes");
     return (
       <div className="space-y-5">
-        <ScriptBlock title="Abertura — identificar o responsável" lines={OPENING_SCRIPT.map(replaceTokens)} />
+        <ScriptBlock title="Abertura — identificar o responsável" lines={script.openingScript.map(replaceTokens)} />
         <div className="space-y-1.5">
           <Label>Qual é a função de quem atendeu? *</Label>
           <Select value={contactRole} disabled={readOnly} onValueChange={(value) => onChange("contact_role", value)}>
             <SelectTrigger><SelectValue placeholder="Selecione o perfil" /></SelectTrigger>
             <SelectContent>
-              {Object.entries(DECISION_MAKER_GUIDANCE).map(([id, item]) => <SelectItem key={id} value={id}>{item.label}</SelectItem>)}
+              {Object.entries(script.decisionMakerGuidance).map(([id, item]) => <SelectItem key={id} value={id}>{item.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -147,7 +143,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
         {contactRole === "reception" && (
           <>
             <Choice id="asked_call_subject" label="Perguntou sobre o assunto da ligação?" value={text("asked_call_subject")} readOnly={readOnly} onChange={onChange} />
-            {text("asked_call_subject") === "yes" && <ScriptBlock title="Resposta sugerida" lines={[RECEPTION_QUESTION_RESPONSE]} />}
+            {text("asked_call_subject") === "yes" && <ScriptBlock title="Resposta sugerida" lines={[script.receptionQuestionResponse]} />}
           </>
         )}
         {needsResponsible && (
@@ -177,9 +173,9 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 2) {
     return (
       <div className="space-y-5">
-        <ScriptBlock title="Se ele topar os 30 segundos" lines={THIRTY_SECONDS_SCRIPT} />
-        <TextAnswer id="google_hook_answer" label="O que o cliente disse sobre o que encontra no Google?" value={text("google_hook_answer")} readOnly={readOnly} onChange={onChange} />
-        <ContextBlock>{THIRTY_SECONDS_CONTEXT} Agora faça somente as quatro perguntas decisórias, uma por vez, sem falar de site.</ContextBlock>
+        <ScriptBlock title="Se ele topar os 30 segundos" lines={script.thirtySecondsScript} />
+        <TextAnswer id="initial_hook_answer" label="Resposta do cliente ao gancho inicial" value={text("initial_hook_answer")} readOnly={readOnly} onChange={onChange} />
+        <ContextBlock>{script.thirtySecondsContext} Agora faça somente as quatro perguntas decisórias, uma por vez, sem falar de site.</ContextBlock>
       </div>
     );
   }
@@ -188,19 +184,27 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
     return (
       <div className="space-y-5">
         <ContextBlock>Faça uma pergunta por vez. Escute, registre e não antecipe a solução.</ContextBlock>
-        {DIAGNOSTIC_QUESTIONS.map((question) => (
-          <Card key={question.id} className="p-4 space-y-4">
-            <p className="font-semibold text-sm">{question.title}</p>
-            <ScriptBlock title="Pergunta" lines={[replaceTokens(question.prompt)]} />
-            <TextAnswer id={question.id} label="Resposta do cliente" value={text(question.id)} readOnly={readOnly} onChange={onChange} />
-            {"followUp" in question && (
-              <>
-                <ScriptBlock title="Pergunta de conclusão" lines={[question.followUp]} />
-                <TextAnswer id={question.followUpId} label="Resposta do cliente" value={text(question.followUpId)} readOnly={readOnly} onChange={onChange} />
-              </>
-            )}
-          </Card>
-        ))}
+        {script.diagnosticQuestions.map((question) => {
+          const normalizedAnswer = text(question.id).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const showFollowUp = !!question.followUp
+            && !!question.followUpId
+            && (!question.followUpWhenIncludes?.length
+              || question.followUpWhenIncludes.some((term) => normalizedAnswer.includes(term.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase())));
+          return (
+            <Card key={question.id} className="p-4 space-y-4">
+              <p className="font-semibold text-sm">{question.title}</p>
+              {question.context && <ContextBlock>{question.context}</ContextBlock>}
+              <ScriptBlock title="Pergunta" lines={[replaceTokens(question.prompt)]} />
+              <TextAnswer id={question.id} label="Resposta do cliente" value={text(question.id)} readOnly={readOnly} onChange={onChange} />
+              {showFollowUp && (
+                <>
+                  <ScriptBlock title="Pergunta de conclusão" lines={[question.followUp!]} />
+                  <TextAnswer id={question.followUpId!} label="Resposta do cliente" value={text(question.followUpId!)} readOnly={readOnly} onChange={onChange} />
+                </>
+              )}
+            </Card>
+          );
+        })}
       </div>
     );
   }
@@ -208,8 +212,8 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 4) {
     return (
       <div className="space-y-5">
-        <ContextBlock>{TURN_GUIDANCE}</ContextBlock>
-        <ScriptBlock title="A virada" lines={[TURN_SCRIPT]} />
+        <ContextBlock>{script.turnGuidance}</ContextBlock>
+        <ScriptBlock title="A virada" lines={[script.turnScript]} />
         <TextAnswer id="turn_summary" label="Resumo personalizado da operação" value={text("turn_summary")} readOnly={readOnly} rows={5} onChange={onChange} />
         <Choice id="summary_confirmed" label="O cliente confirmou seu entendimento?" value={text("summary_confirmed")} readOnly={readOnly} onChange={onChange} />
       </div>
@@ -219,14 +223,15 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 5) {
     return (
       <div className="space-y-5">
-        <ScriptBlock title="Apresentação da solução" lines={SOLUTION_SCRIPT} />
+        <ScriptBlock title="Apresentação da solução" lines={script.solutionScript} />
+        {!!script.valueScript.length && <ScriptBlock title="Criar valor" lines={script.valueScript} />}
         <TextAnswer id="solution_reaction" label="Reação e observações do cliente" value={text("solution_reaction")} readOnly={readOnly} onChange={onChange} />
       </div>
     );
   }
 
   if (step === 6) {
-    const invitation = DEMO_INVITATION
+    const invitation = script.demoInvitation
       .replace("[OPÇÃO 1]", text("demo_option_one") || "[OPÇÃO 1]")
       .replace("[OPÇÃO 2]", text("demo_option_two") || "[OPÇÃO 2]");
     return (
@@ -240,7 +245,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
         {text("demo_accepted") === "yes" && (
           <>
             <div className="space-y-1.5"><Label>Horário confirmado</Label><Input type="datetime-local" value={text("demo_scheduled_at")} disabled={readOnly} onChange={(event) => onChange("demo_scheduled_at", event.target.value)} /></div>
-            <ScriptBlock title="Confirmação" lines={[DEMO_CONFIRMATION]} />
+            <ScriptBlock title="Confirmação" lines={[script.demoConfirmation]} />
           </>
         )}
         {text("demo_accepted") === "no" && <p className="text-sm text-warning">Avance para registrar a objeção e usar a resposta recomendada.</p>}
@@ -255,7 +260,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Marque as objeções apresentadas. A resposta correspondente aparecerá durante a call.</p>
-        {OBJECTIONS.map((objection) => {
+        {script.objections.map((objection) => {
           const checked = selectedObjections.includes(objection.id);
           return (
             <Card key={objection.id} className={`p-4 ${checked ? "border-primary/40" : ""}`}>
@@ -288,8 +293,8 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
         </Select>
       </div>
       <TextAnswer id="final_notes" label="Resumo final da ligação" value={text("final_notes")} readOnly={readOnly} rows={5} onChange={onChange} />
-      <ScriptBlock title="Frases centrais" lines={CENTRAL_PHRASES} />
-      <ContextBlock><strong>Objetivo final:</strong> {FINAL_OBJECTIVE}</ContextBlock>
+      <ScriptBlock title="Frases centrais" lines={script.centralPhrases} />
+      <ContextBlock><strong>Objetivo final:</strong> {script.finalObjective}</ContextBlock>
     </div>
   );
 }

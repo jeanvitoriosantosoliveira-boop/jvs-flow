@@ -1,3 +1,5 @@
+import type { SalesScriptDefinition } from "@/types/salesScript";
+
 export const VEHICLE_STORE_SCRIPT_KEY = "vehicle_store";
 export const VEHICLE_STORE_SCRIPT_VERSION = 2;
 export const DEFAULT_STORE_OBSERVATION = "vocês não têm um site próprio, só divulgam pelo Instagram e pelas plataformas de anúncio";
@@ -138,3 +140,27 @@ export const PRE_CALL_CHECKLIST = [
 ];
 
 export const FINAL_OBJECTIVE = "Identificar o decisor → fazer quatro perguntas → fazer o lojista perceber a lacuna → apresentar o site como solução → marcar a demonstração. Cold call não precisa fechar a venda. Precisa vender o próximo passo.";
+
+export const VEHICLE_STORE_SCRIPT: SalesScriptDefinition = {
+  key: VEHICLE_STORE_SCRIPT_KEY,
+  version: VEHICLE_STORE_SCRIPT_VERSION,
+  title: "Lojas de veículos",
+  defaultObservation: DEFAULT_STORE_OBSERVATION,
+  callObjective: CALL_OBJECTIVE,
+  openingScript: OPENING_SCRIPT,
+  thirtySecondsScript: THIRTY_SECONDS_SCRIPT,
+  thirtySecondsContext: THIRTY_SECONDS_CONTEXT,
+  decisionMakerGuidance: DECISION_MAKER_GUIDANCE,
+  receptionQuestionResponse: RECEPTION_QUESTION_RESPONSE,
+  diagnosticQuestions: DIAGNOSTIC_QUESTIONS,
+  turnGuidance: TURN_GUIDANCE,
+  turnScript: TURN_SCRIPT,
+  solutionScript: SOLUTION_SCRIPT,
+  valueScript: [],
+  demoInvitation: DEMO_INVITATION,
+  demoConfirmation: DEMO_CONFIRMATION,
+  objections: OBJECTIONS,
+  centralPhrases: CENTRAL_PHRASES,
+  preCallChecklist: PRE_CALL_CHECKLIST,
+  finalObjective: FINAL_OBJECTIVE,
+};
