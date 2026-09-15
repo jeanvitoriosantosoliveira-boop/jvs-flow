@@ -31,8 +31,9 @@ export const OPENING_SCRIPT = [
 export const THIRTY_SECONDS_SCRIPT = [
   "Show de bola. A maioria das lojas que eu falo hoje já vende bem e já tem movimento — então essa ligação não é sobre “vocês precisam vender mais”.",
   "É sobre uma coisa específica: quando alguém pesquisa o nome da loja de vocês no Google antes de fechar negócio, o que essa pessoa encontra?",
-  "Deixe o cliente responder. Esse é o gancho para iniciar as quatro perguntas sem antecipar a solução.",
 ];
+
+export const THIRTY_SECONDS_CONTEXT = "Deixe o cliente responder. Esse é o gancho para iniciar as quatro perguntas sem antecipar a solução.";
 
 export const DECISION_MAKER_GUIDANCE = {
   owner: {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Save } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Info, Loader2, Quote, Save } from "lucide-react";
 import { toast } from "sonner";
 import { SalesFlowStep } from "@/components/SalesFlowStep";
 import { Badge } from "@/components/ui/badge";
@@ -220,6 +220,14 @@ export function SalesFlowDialog({ open, lead, flow, onOpenChange, onSaved }: Sal
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-3">
             <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Badge variant="outline" className="border-accent/40 text-accent gap-1">
+              <Quote className="w-3 h-3" /> Grifado: leia para o cliente
+            </Badge>
+            <Badge variant="secondary" className="gap-1">
+              <Info className="w-3 h-3" /> Cinza: orientação interna
+            </Badge>
           </div>
         </DialogHeader>
 

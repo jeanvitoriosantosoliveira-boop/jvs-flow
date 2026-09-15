@@ -1,15 +1,16 @@
-import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Info, Quote } from "lucide-react";
 import {
   CALL_OBJECTIVE, CENTRAL_PHRASES, DECISION_MAKER_GUIDANCE, DEMO_CONFIRMATION,
   DEFAULT_STORE_OBSERVATION, DEMO_INVITATION, DIAGNOSTIC_QUESTIONS, FINAL_OBJECTIVE, OBJECTIONS,
   OPENING_SCRIPT, PRE_CALL_CHECKLIST, RECEPTION_QUESTION_RESPONSE, SOLUTION_SCRIPT,
-  THIRTY_SECONDS_SCRIPT, TURN_GUIDANCE, TURN_SCRIPT,
+  THIRTY_SECONDS_CONTEXT, THIRTY_SECONDS_SCRIPT, TURN_GUIDANCE, TURN_SCRIPT,
 } from "@/data/vehicleStoreSalesScript";
 import type { SalesFlowAnswers, SalesFlowAnswerValue, SalesFlowLead } from "@/types/salesFlow";
 
@@ -23,12 +24,25 @@ interface SalesFlowStepProps {
 
 function ScriptBlock({ title, lines }: { title: string; lines: readonly string[] }) {
   return (
-    <Card className="p-4 bg-primary/5 border-primary/20">
-      <p className="text-xs font-semibold uppercase tracking-wide text-primary mb-2">{title}</p>
-      <div className="space-y-2 text-sm">
-        {lines.map((line) => <p key={line}>{line}</p>)}
+    <Card className="p-4 bg-accent/10 border-accent/40 border-l-4 border-l-accent">
+      <p className="text-xs font-bold uppercase tracking-wide text-accent mb-2 flex items-center gap-1.5">
+        <Quote className="w-3.5 h-3.5" /> Leia para o cliente · {title}
+      </p>
+      <div className="space-y-2 text-sm font-medium">
+        {lines.map((line) => <p key={line}>“{line}”</p>)}
       </div>
     </Card>
+  );
+}
+
+function ContextBlock({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+        <Info className="w-3.5 h-3.5" /> Orientação para o vendedor
+      </p>
+      {children}
+    </div>
   );
 }
 
@@ -81,9 +95,13 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 0) {
     return (
       <div className="space-y-5">
-        <ScriptBlock title={CALL_OBJECTIVE.title} lines={[CALL_OBJECTIVE.description, CALL_OBJECTIVE.change]} />
+        <ContextBlock>
+          <p className="font-medium text-foreground">{CALL_OBJECTIVE.title}</p>
+          <p>{CALL_OBJECTIVE.description}</p>
+          <p className="mt-2">{CALL_OBJECTIVE.change}</p>
+        </ContextBlock>
         <TextAnswer id="specific_observation" label="Observação real sobre a loja (opcional)" value={text("specific_observation")} readOnly={readOnly} onChange={onChange} />
-        <p className="text-xs text-muted-foreground">Se ficar vazio, será utilizado: “{DEFAULT_STORE_OBSERVATION}”.</p>
+        <ContextBlock>Se ficar vazio, será utilizado: “{DEFAULT_STORE_OBSERVATION}”.</ContextBlock>
         <div className="space-y-2">
           <Label>Checklist antes de ligar</Label>
           {PRE_CALL_CHECKLIST.map((item, index) => {
@@ -118,7 +136,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
             </SelectContent>
           </Select>
         </div>
-        {guidance && <ScriptBlock title="Orientação" lines={[guidance.script]} />}
+        {guidance && <ScriptBlock title="Fala conforme quem atendeu" lines={[guidance.script]} />}
         {contactRole === "manager" && (
           <>
             <Choice id="participates_decisions" label="Participa das decisões comerciais e de divulgação?" value={text("participates_decisions")} readOnly={readOnly} onChange={onChange} />
@@ -161,7 +179,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
       <div className="space-y-5">
         <ScriptBlock title="Se ele topar os 30 segundos" lines={THIRTY_SECONDS_SCRIPT} />
         <TextAnswer id="google_hook_answer" label="O que o cliente disse sobre o que encontra no Google?" value={text("google_hook_answer")} readOnly={readOnly} onChange={onChange} />
-        <p className="text-sm text-muted-foreground">Agora faça somente as quatro perguntas decisórias, uma por vez, sem falar de site.</p>
+        <ContextBlock>{THIRTY_SECONDS_CONTEXT} Agora faça somente as quatro perguntas decisórias, uma por vez, sem falar de site.</ContextBlock>
       </div>
     );
   }
@@ -169,14 +187,19 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 3) {
     return (
       <div className="space-y-5">
-        <p className="text-sm text-muted-foreground">Faça uma pergunta por vez. Escute, registre e não antecipe a solução.</p>
+        <ContextBlock>Faça uma pergunta por vez. Escute, registre e não antecipe a solução.</ContextBlock>
         {DIAGNOSTIC_QUESTIONS.map((question) => (
-          <div key={question.id} className="space-y-4">
-            <TextAnswer id={question.id} label={`${question.title} — ${replaceTokens(question.prompt)}`} value={text(question.id)} readOnly={readOnly} onChange={onChange} />
+          <Card key={question.id} className="p-4 space-y-4">
+            <p className="font-semibold text-sm">{question.title}</p>
+            <ScriptBlock title="Pergunta" lines={[replaceTokens(question.prompt)]} />
+            <TextAnswer id={question.id} label="Resposta do cliente" value={text(question.id)} readOnly={readOnly} onChange={onChange} />
             {"followUp" in question && (
-              <TextAnswer id={question.followUpId} label={`Conclusão — ${question.followUp}`} value={text(question.followUpId)} readOnly={readOnly} onChange={onChange} />
+              <>
+                <ScriptBlock title="Pergunta de conclusão" lines={[question.followUp]} />
+                <TextAnswer id={question.followUpId} label="Resposta do cliente" value={text(question.followUpId)} readOnly={readOnly} onChange={onChange} />
+              </>
             )}
-          </div>
+          </Card>
         ))}
       </div>
     );
@@ -185,7 +208,8 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
   if (step === 4) {
     return (
       <div className="space-y-5">
-        <ScriptBlock title="A virada" lines={[TURN_GUIDANCE, TURN_SCRIPT]} />
+        <ContextBlock>{TURN_GUIDANCE}</ContextBlock>
+        <ScriptBlock title="A virada" lines={[TURN_SCRIPT]} />
         <TextAnswer id="turn_summary" label="Resumo personalizado da operação" value={text("turn_summary")} readOnly={readOnly} rows={5} onChange={onChange} />
         <Choice id="summary_confirmed" label="O cliente confirmou seu entendimento?" value={text("summary_confirmed")} readOnly={readOnly} onChange={onChange} />
       </div>
@@ -239,7 +263,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
                 <Checkbox checked={checked} disabled={readOnly} onCheckedChange={(value) => toggleObjection(objection.id, value === true)} />
                 <span>“{objection.label}”</span>
               </label>
-              {checked && <div className="mt-3 text-sm bg-primary/5 rounded-lg p-3">{objection.response}</div>}
+              {checked && <div className="mt-3"><ScriptBlock title="Resposta sugerida" lines={[objection.response]} /></div>}
             </Card>
           );
         })}
@@ -265,9 +289,7 @@ export function SalesFlowStep({ step, lead, answers, readOnly, onChange }: Sales
       </div>
       <TextAnswer id="final_notes" label="Resumo final da ligação" value={text("final_notes")} readOnly={readOnly} rows={5} onChange={onChange} />
       <ScriptBlock title="Frases centrais" lines={CENTRAL_PHRASES} />
-      <Card className="p-4 text-sm bg-success/5 border-success/20">
-        <strong>Objetivo final:</strong> {FINAL_OBJECTIVE}
-      </Card>
+      <ContextBlock><strong>Objetivo final:</strong> {FINAL_OBJECTIVE}</ContextBlock>
     </div>
   );
 }

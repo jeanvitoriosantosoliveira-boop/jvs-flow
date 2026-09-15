@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, MessageCircle, Instagram, Phone, Calendar, Trash2, Pencil, Save, Clock, Play, FileText, Loader2 } from "lucide-react";
+import { Plus, MessageCircle, Instagram, Phone, Calendar, Trash2, Pencil, Save, Clock, Play, FileText, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PeriodFilter, type Period, inPeriod } from "@/components/PeriodFilter";
 import { SalesFlowDialog } from "@/components/SalesFlowDialog";
@@ -34,10 +34,19 @@ function instagramLink(n?: string | null) {
   return handle ? `https://instagram.com/${handle}` : null;
 }
 
+function normalizeSearch(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
   const wa = whatsLink(lead.whatsapp || lead.phone);
+  const contact = lead.whatsapp || lead.phone;
   return (
     <div ref={setNodeRef} style={style} className={`bg-card border border-border rounded-lg p-3 space-y-2 ${isDragging ? "opacity-40" : ""} hover:border-accent/40 transition`}>
       <div {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing space-y-1">
@@ -47,6 +56,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
         </div>
         {lead.company && <p className="text-xs text-muted-foreground truncate">{lead.company}</p>}
         {lead.niche && <p className="text-[10px] text-muted-foreground truncate">{lead.niche}</p>}
+        {contact && <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate"><Phone className="w-3 h-3 shrink-0" /> {contact}</p>}
         {lead.next_followup_at && <p className="text-[10px] text-warning flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(lead.next_followup_at).toLocaleDateString("pt-BR")}</p>}
         {!!lead.time_spent_seconds && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {Math.round(lead.time_spent_seconds / 60)} min</p>}
       </div>
@@ -88,6 +98,7 @@ export default function SalesFunnel() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ownerFilter, setOwnerFilter] = useState("mine");
   const [period, setPeriod] = useState<Period>({ preset: "all" });
+  const [leadSearch, setLeadSearch] = useState("");
   const [stageForm, setStageForm] = useState<Partial<Stage> | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const isLeader = user?.role === "leader";
@@ -284,6 +295,22 @@ export default function SalesFunnel() {
   }
 
   const leadActivities = useMemo(() => openLead ? activities.filter(a => a.lead_id === openLead.id) : [], [openLead, activities]);
+  const visibleLeads = useMemo(() => {
+    const term = normalizeSearch(leadSearch);
+    const digits = leadSearch.replace(/\D/g, "");
+
+    return leads.filter((lead) => {
+      if (period.preset !== "all" && !inPeriod(lead.updated_at ?? lead.created_at, period)) return false;
+      if (!term) return true;
+
+      const textMatch = [lead.name, lead.niche, lead.phone, lead.whatsapp]
+        .some((value) => normalizeSearch(value).includes(term));
+      const phoneMatch = !!digits && [lead.phone, lead.whatsapp]
+        .some((value) => (value ?? "").replace(/\D/g, "").includes(digits));
+
+      return textMatch || phoneMatch;
+    });
+  }, [leads, leadSearch, period]);
 
   return (
     <div className="p-4">
@@ -354,11 +381,26 @@ export default function SalesFunnel() {
         }
       />
 
+      <Card className="p-3 mb-4 flex items-center gap-3">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={leadSearch}
+            onChange={(event) => setLeadSearch(event.target.value)}
+            placeholder="Pesquisar por nome, telefone, WhatsApp ou nicho..."
+            className="pl-9"
+          />
+        </div>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {visibleLeads.length} lead{visibleLeads.length !== 1 ? "s" : ""}
+        </span>
+      </Card>
+
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
           {stages.map(s => (
             <div key={s.id} className="relative group">
-              <StageColumn stage={s} leads={leads.filter(l => l.stage_id === s.id && (period.preset === "all" || inPeriod(l.updated_at ?? l.created_at, period)))} onCardClick={openLeadDialog} />
+              <StageColumn stage={s} leads={visibleLeads.filter(l => l.stage_id === s.id)} onCardClick={openLeadDialog} />
               {isLeader && (
                 <div className="absolute top-2 right-2 hidden group-hover:flex gap-1">
                   {!s.is_won && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setStageForm(s)}><Pencil className="w-3 h-3" /></Button>}
