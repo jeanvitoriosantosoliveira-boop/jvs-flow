@@ -446,6 +446,21 @@ export default function SalesFunnel() {
                 <div><Label>Telefone</Label><Input value={leadDraft.phone ?? ""} onChange={e => setLeadDraft(f => ({ ...f, phone: e.target.value }))} /></div>
                 <div><Label>Ticket estimado</Label><Input type="number" value={leadDraft.estimated_value ?? 0} onChange={e => setLeadDraft(f => ({ ...f, estimated_value: Number(e.target.value) }))} /></div>
                 <div><Label>Origem</Label><Input value={leadDraft.source ?? ""} onChange={e => setLeadDraft(f => ({ ...f, source: e.target.value }))} /></div>
+                {isLeader && (
+                  <div><Label>Responsável pelo lead</Label>
+                    <Select value={leadDraft.owner_id ?? ""} onValueChange={v => setLeadDraft(f => ({ ...f, owner_id: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
+                      <SelectContent>
+                        {user && !commercialUsers.find(u => u.id === user.id) && (
+                          <SelectItem value={user.id}>{user.name} (eu)</SelectItem>
+                        )}
+                        {commercialUsers.map(u => (
+                          <SelectItem key={u.id} value={u.id}>{u.id === user?.id ? `${u.name} (eu)` : u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div><Label>Tempo gasto (min)</Label><Input type="number" value={Math.round((leadDraft.time_spent_seconds ?? 0) / 60)} onChange={e => setLeadDraft(f => ({ ...f, time_spent_seconds: Number(e.target.value) * 60 }))} /></div>
                 <div><Label>Próximo follow-up</Label><Input type="datetime-local" value={leadDraft.next_followup_at ? leadDraft.next_followup_at.slice(0, 16) : ""} onChange={e => setLeadDraft(f => ({ ...f, next_followup_at: e.target.value ? new Date(e.target.value).toISOString() : null }))} /></div>
                 <div><Label>Estágio</Label>
